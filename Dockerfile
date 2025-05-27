@@ -22,7 +22,7 @@ ENV APP_DIR="/application" \
     PATH="$POETRY_HOME/bin:$PATH" \
     POETRY_VIRTUALENVS_IN_PROJECT=false \
     POETRY_NO_INTERACTION=1
-WORKDIR $APP_DIR    
+WORKDIR $APP_DIR
 
 COPY pyproject.toml pyproject.toml
 COPY poetry.lock poetry.lock

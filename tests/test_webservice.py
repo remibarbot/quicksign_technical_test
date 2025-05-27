@@ -76,7 +76,8 @@ def test_base_exceptions_str_representation():
     """Test the string representation of BaseAPIException."""
     exc = BaseAPIException("Test error")
     assert (
-        str(exc) == "[status_code=500][title=internal server error][details=Test error]"
+        str(exc)
+        == "[status_code=500][title=internal server error][details=Test error]"
     )
 
 

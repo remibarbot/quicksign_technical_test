@@ -31,7 +31,8 @@ class BaseAPIException(Exception):
     def response(self) -> JSONResponse:
         """Return response based on pydantic model."""
         return JSONResponse(
-            content=self.content.model_dump(), status_code=self.content.status_code
+            content=self.content.model_dump(),
+            status_code=self.content.status_code,
         )
 
     @classmethod
