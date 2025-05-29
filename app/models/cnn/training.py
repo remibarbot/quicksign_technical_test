@@ -13,30 +13,31 @@ from app.data.data_loading import (
 from app.models.cnn.metric_accumulator import MetricAccumulator
 from app.models.cnn.simple_cnn import SimpleCNN
 
+IMAGE_SIZE = 128
+
 
 class SimpleTrainer:
-    def __init__(self, input_image_size: int = 128):
+    def __init__(self):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print("Using device: {}".format(self.device))
         self.path_to_data = getenv(
             "PATH_TO_DATA", "/home/remi/work/document_dataset"
         )
         print(f"Training on data in : {self.path_to_data}")
-        self.input_image_size = input_image_size
-        self.model = SimpleCNN(input_image_size).to(self.device)
+        self.model = SimpleCNN(IMAGE_SIZE).to(self.device)
         self.criterion = nn.BCEWithLogitsLoss()
         self.optimizer = optim.Adam(self.model.parameters(), lr=1e-3)
         self.train_loader = get_data_loader(
             Path(self.path_to_data) / "train",
             batch_size=32,
             shuffle=True,
-            transforms=get_train_transforms(image_size=input_image_size),
+            transforms=get_train_transforms(image_size=IMAGE_SIZE),
         )
         self.val_loader = get_data_loader(
             Path(self.path_to_data) / "val",
             batch_size=32,
             shuffle=False,
-            transforms=get_val_transforms(image_size=input_image_size),
+            transforms=get_val_transforms(image_size=IMAGE_SIZE),
         )
 
     def _training_pass(self) -> tuple[float, float]:
@@ -80,6 +81,11 @@ class SimpleTrainer:
         return val_loss, val_acc
 
     def train(self, num_epochs: int) -> None:
+        """
+        Train the model for num_epochs epochs.
+
+        Will stop early if the validation loss raises two times in a row.
+        """
         last_val_loss = float("inf")
         was_over_last_val_loss = False
         for epoch in tqdm(range(num_epochs), desc="Training Epochs"):
@@ -102,7 +108,6 @@ class SimpleTrainer:
 
 if __name__ == "__main__":
     number_of_epochs = 10
-    image_size = 128
-    trainer = SimpleTrainer(image_size)
+    trainer = SimpleTrainer()
     trainer.train(number_of_epochs)
-    torch.save(trainer.model.state_dict(), "app/checkpoint/simple_cnn_binary.pt")
+    torch.save(trainer.model.state_dict(), "checkpoints/simple_cnn_binary.pt")
