@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import Any
 
 import joblib
 from sklearn.base import BaseEstimator
@@ -20,7 +21,6 @@ def train_svm_classifier(path_to_train_data: Path) -> None:
     svm_classifier = make_pipeline(StandardScaler(), LinearSVC(verbose=True))
     print("Fitting SVM classifier...")
     svm_classifier.fit(features_training, labels_training)
-    joblib.dump(svm_classifier, "svm_classifier.joblib")
     print("SVM trained, saving...")
     joblib.dump(
         svm_classifier,
@@ -29,22 +29,18 @@ def train_svm_classifier(path_to_train_data: Path) -> None:
     print("SVM model saved to models/svm_hog_classifier.joblib")
 
 
-def evaluate_svm_classifier(path_to_test_data: Path) -> None:
+def evaluate_svm_classifier(path_to_test_data: Path, svm_model: BaseEstimator) -> dict[str, Any]:
     class_names = ["Handwritten", "Printed"]
     features_testing, labels_testing = get_hog_dataset(
         path_to_test_data, IMAGE_SIZE
     )
-    svm_classifier = joblib.load(
-        Path(__file__).parent / "models" / "svm_hog_classifier.joblib"
-    )
     print("Evaluating SVM classifier...")
-    labels_prediction = svm_classifier.predict(features_testing)
+    labels_prediction = svm_model.predict(features_testing)
 
-    print(
-        classification_report(
-            labels_testing, labels_prediction, target_names=class_names
+    report =classification_report(
+            labels_testing, labels_prediction, target_names=class_names, output_dict=True
         )
-    )
+
 
     cm = confusion_matrix(labels_testing, labels_prediction, normalize="true")
 
@@ -53,7 +49,13 @@ def evaluate_svm_classifier(path_to_test_data: Path) -> None:
     table = []
     for i, row in enumerate(cm):
         table.append([f"True {class_names[i]}"] + list(row))
-    print(tabulate(table, headers, tablefmt="grid"))
+    cm_string = tabulate(table, headers, tablefmt="grid")
+
+    return {
+        "accuracy": report["accuracy"],
+        "confusion_matrix": cm_string,
+        "AUC": None,
+    }
 
 
 def inference_svm_classifier(image_path: Path, svm_model: BaseEstimator) -> str:
@@ -63,20 +65,5 @@ def inference_svm_classifier(image_path: Path, svm_model: BaseEstimator) -> str:
     return classes[int(prediction[0])]
 
 
-if __name__ == "__main__":
-    path_to_data = os.getenv("PATH_TO_DATA", "/home/remi/work/document_dataset")
-    # train_svm_classifier(Path(path_to_data) / "train")
-    # evaluate_svm_classifier(Path(path_to_data) / "test")
-
-    svm_classifier = joblib.load(
-        Path(__file__).parent / "models" / "svm_hog_classifier.joblib"
-    )
-    print(
-        inference_svm_classifier(
-            Path(path_to_data)
-            / "val"
-            / "handwritten"
-            / "500286232_500286233.jpg",
-            svm_classifier,
-        )
-    )
+def get_svm_model() -> BaseEstimator:
+    return joblib.load(Path(__file__).parent / "models" / "svm_hog_classifier.joblib")

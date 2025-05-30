@@ -4,3 +4,5 @@ services:
     ports:
       - "9000:9000"
     platform: "linux/amd64"
+    volumes:
+      - ${DATA_PATH_ON_HOST}:/data

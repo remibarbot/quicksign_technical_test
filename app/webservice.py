@@ -1,13 +1,30 @@
 """Base API."""
 
 import typing as tp
+from pathlib import Path
+from typing import Optional
+import tempfile
+import shutil
 
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request, status, Body, UploadFile, File
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
+from app.classifiers.cnn.predictor import Predictor
+from app.classifiers.svm.svm_classifier import (
+    get_svm_model,
+    evaluate_svm_classifier,
+    inference_svm_classifier,
+)
 from app.exceptions import (
     BaseAPIException,
+)
+from app.schemas import (
+    ModelListResponse,
+    EvaluationRequest,
+    EvaluationResponse,
+    PredictionResponse,
+    DataDirResponse,
 )
 
 
@@ -102,24 +119,83 @@ app = create_app(
     description="Service to run application.",
 )
 
+# --- Loading model globally at startup ---
+cnn_predictor = Predictor(checkpoint_path=Path(__file__).parent / "classifiers" / "cnn" / "checkpoints" / "simple_cnn_binary.pt")
+svm_model = get_svm_model()
+# --------------------------------------
+
 
 EXTRA_RESPONSES = {
     **BaseAPIException.response_model(),
 }
 
-
-@app.post(
-    "/method",
+@app.get(
+    "/models",
+    response_model=ModelListResponse,
     responses=EXTRA_RESPONSES,
 )
-async def expectation(
-    raise_error: bool,
-) -> tp.Any:
-    """Example of a post method.
+async def list_available_models():
+    return ModelListResponse(models=["cnn", "svm"])
 
-    Args:
-        raise_error: Boolean flag to determine whether to raise an exception.
-    """
-    if raise_error:
-        raise BaseAPIException("An error occurred.")
-    return {"message": "Method POST worked well."}
+
+@app.post(
+    "/evaluate/{model_type}",
+    response_model=EvaluationResponse,
+    responses=EXTRA_RESPONSES,
+)
+async def evaluate_model(model_type: str, evaluation_request: EvaluationRequest = Body(...),):
+    test_data_path = Path(evaluation_request.test_data_path)
+    if not test_data_path.exists():
+        raise BaseAPIException("The evaluation directory does not exist.")
+    if model_type == "cnn":
+        results = cnn_predictor.evaluate(test_data_path)
+    elif model_type == "svm":
+        results = evaluate_svm_classifier(test_data_path, svm_model)
+    else:
+        raise BaseAPIException("Unknown model type. Run /models first to know available model types.")
+    return results
+
+@app.post(
+    "/predict/{model_type}",
+    response_model=PredictionResponse,
+    responses=EXTRA_RESPONSES,
+)
+async def predict_image_with_model(
+    model_type: str,
+    file: UploadFile = File(None),
+):
+    confidence = None
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
+        shutil.copyfileobj(file.file, tmp)
+        image_path = Path(tmp.name)
+    remove_after = True
+    try:
+        if model_type == "cnn":
+            pred_class, confidence = cnn_predictor.predict(image_path)
+        elif model_type == "svm":
+            pred_class = inference_svm_classifier(image_path, svm_model)
+        else:
+            raise BaseAPIException(
+                "Unknown model type. Run /models first to know available model types."
+            )
+
+        return PredictionResponse(
+            predicted_class=pred_class,
+            confidence=confidence,
+        )
+    finally:
+        if file is not None and remove_after and image_path.exists():
+            image_path.unlink()
+
+
+@app.get(
+    "/data",
+    response_model=DataDirResponse,
+    responses=EXTRA_RESPONSES,
+)
+async def list_content_of_data_directory():
+    if not Path("/data").exists():
+        raise BaseAPIException("The data directory does not exist. "
+                               "Make sure to set the env variable DATA_PATH_ON_HOST "
+                               "before launching the service")
+    return DataDirResponse(dir_content=list(Path("/data").glob("*")))
