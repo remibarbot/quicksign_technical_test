@@ -10,3 +10,15 @@ def create_fake_image_at_path(path: Path, size: int, mode: str = "L") -> None:
     )
     img = Image.fromarray(arr.squeeze(), mode)
     img.save(path)
+
+
+def create_fake_image_folder_structure(root_path: Path, n_per_class=2, size=64):
+    (root_path / "handwritten").mkdir(parents=True, exist_ok=True)
+    (root_path / "printed").mkdir(parents=True, exist_ok=True)
+    for i in range(n_per_class):
+        create_fake_image_at_path(
+            root_path / "handwritten" / f"hw_{i}.jpg", size, "L"
+        )
+        create_fake_image_at_path(
+            root_path / "printed" / f"pr_{i}.jpg", size, "L"
+        )

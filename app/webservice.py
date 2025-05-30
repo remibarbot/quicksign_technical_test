@@ -1,30 +1,29 @@
 """Base API."""
 
+import shutil
+import tempfile
 import typing as tp
 from pathlib import Path
-from typing import Optional
-import tempfile
-import shutil
 
-from fastapi import FastAPI, Request, status, Body, UploadFile, File
+from fastapi import Body, FastAPI, File, Request, UploadFile, status
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
 from app.classifiers.cnn.predictor import Predictor
 from app.classifiers.svm.svm_classifier import (
-    get_svm_model,
     evaluate_svm_classifier,
+    get_svm_model,
     inference_svm_classifier,
 )
 from app.exceptions import (
     BaseAPIException,
 )
 from app.schemas import (
-    ModelListResponse,
+    DataDirResponse,
     EvaluationRequest,
     EvaluationResponse,
+    ModelListResponse,
     PredictionResponse,
-    DataDirResponse,
 )
 
 
@@ -120,7 +119,13 @@ app = create_app(
 )
 
 # --- Loading model globally at startup ---
-cnn_predictor = Predictor(checkpoint_path=Path(__file__).parent / "classifiers" / "cnn" / "checkpoints" / "simple_cnn_binary.pt")
+cnn_predictor = Predictor(
+    checkpoint_path=Path(__file__).parent
+    / "classifiers"
+    / "cnn"
+    / "checkpoints"
+    / "simple_cnn_binary.pt"
+)
 svm_model = get_svm_model()
 # --------------------------------------
 
@@ -128,6 +133,7 @@ svm_model = get_svm_model()
 EXTRA_RESPONSES = {
     **BaseAPIException.response_model(),
 }
+
 
 @app.get(
     "/models",
@@ -143,7 +149,10 @@ async def list_available_models():
     response_model=EvaluationResponse,
     responses=EXTRA_RESPONSES,
 )
-async def evaluate_model(model_type: str, evaluation_request: EvaluationRequest = Body(...),):
+async def evaluate_model(
+    model_type: str,
+    evaluation_request: EvaluationRequest = Body(...),
+):
     test_data_path = Path(evaluation_request.test_data_path)
     if not test_data_path.exists():
         raise BaseAPIException("The evaluation directory does not exist.")
@@ -152,8 +161,11 @@ async def evaluate_model(model_type: str, evaluation_request: EvaluationRequest 
     elif model_type == "svm":
         results = evaluate_svm_classifier(test_data_path, svm_model)
     else:
-        raise BaseAPIException("Unknown model type. Run /models first to know available model types.")
+        raise BaseAPIException(
+            "Unknown model type. Run /models first to know available model types."
+        )
     return results
+
 
 @app.post(
     "/predict/{model_type}",
@@ -195,7 +207,9 @@ async def predict_image_with_model(
 )
 async def list_content_of_data_directory():
     if not Path("/data").exists():
-        raise BaseAPIException("The data directory does not exist. "
-                               "Make sure to set the env variable DATA_PATH_ON_HOST "
-                               "before launching the service")
+        raise BaseAPIException(
+            "The data directory does not exist. "
+            "Make sure to set the env variable DATA_PATH_ON_HOST "
+            "before launching the service"
+        )
     return DataDirResponse(dir_content=list(Path("/data").glob("*")))

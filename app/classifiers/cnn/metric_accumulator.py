@@ -6,9 +6,9 @@ from torch import Tensor
 
 class MetricAccumulator:
     def __init__(self):
-        self.losses = []
-        self.preds = []
-        self.targets = []
+        self.losses: list[float] = []
+        self.preds: list[bool] = []
+        self.targets: list[float] = []
 
     def update(self, outputs: Tensor, targets: Tensor, loss: Tensor) -> None:
         self.losses.append(loss.item())

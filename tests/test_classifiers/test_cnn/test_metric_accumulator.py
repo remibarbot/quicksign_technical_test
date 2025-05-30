@@ -44,3 +44,19 @@ def test_compute__calculate_the_expected_metrics_from_internal_state() -> None:
     # Then
     assert average_loss == pytest.approx(expected_average_loss)
     assert accuracy == pytest.approx(expected_accuracy)
+
+
+def test_reset__clean_the_internal_state() -> None:
+    # Given
+    accumulator = MetricAccumulator()
+    accumulator.losses = [0.2, 0.4]
+    accumulator.preds = [True, False]
+    accumulator.targets = [0.4, 0.6]
+
+    # When
+    accumulator.reset()
+
+    # Then
+    assert accumulator.losses == []
+    assert accumulator.preds == []
+    assert accumulator.targets == []

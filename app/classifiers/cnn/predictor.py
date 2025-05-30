@@ -1,10 +1,10 @@
-from os import getenv
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import torch
 from numpy.typing import NDArray
+from PIL import Image
 from sklearn.metrics import (
     classification_report,
     confusion_matrix,
@@ -12,7 +12,6 @@ from sklearn.metrics import (
 )
 from tabulate import tabulate
 from tqdm import tqdm
-from PIL import Image
 
 from app.classifiers.cnn import IMAGE_SIZE
 from app.classifiers.cnn.simple_cnn import SimpleCNN
@@ -35,14 +34,11 @@ class Predictor:
         tensor = transforms(image).unsqueeze(0).to(self.device)
         with torch.no_grad():
             logits = self.model(tensor)
-            prob = (
-                torch.sigmoid(logits).cpu().numpy().flatten()[0]
-            )
+            prob = torch.sigmoid(logits).cpu().numpy().flatten()[0]
             pred_class = int(prob > 0.5)
             # Confidence is probability of predicted class
             confidence = prob if pred_class == 1 else 1 - prob
         return classes[pred_class], round(float(confidence), 4)
-
 
     def evaluate(self, path_to_test_data: Path) -> dict[str, Any]:
         print(f"Evaluating on test data in : {path_to_test_data}")
@@ -79,8 +75,8 @@ class Predictor:
         # ROC AUC: (true labels, predicted probabilities)
         auc = roc_auc_score(all_targets, all_probs)
         report = classification_report(
-                all_targets, all_preds_int, target_names=class_names,output_dict=True
-            )
+            all_targets, all_preds_int, target_names=class_names, output_dict=True
+        )
 
         # Build table with headers
         headers = [""] + [f"Pred {name}" for name in class_names]
@@ -90,6 +86,7 @@ class Predictor:
         cm_string = tabulate(table, headers, tablefmt="grid")
 
         return {
-            "accuracy" : report["accuracy"],
-            "confusion_matrix" : cm_string,
-            "AUC": round(float(auc), 4)}
+            "accuracy": report["accuracy"],
+            "confusion_matrix": cm_string,
+            "AUC": round(float(auc), 4),
+        }

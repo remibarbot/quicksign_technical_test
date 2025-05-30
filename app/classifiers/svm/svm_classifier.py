@@ -1,4 +1,4 @@
-import os
+from os import getenv
 from pathlib import Path
 from typing import Any
 
@@ -29,7 +29,9 @@ def train_svm_classifier(path_to_train_data: Path) -> None:
     print("SVM model saved to models/svm_hog_classifier.joblib")
 
 
-def evaluate_svm_classifier(path_to_test_data: Path, svm_model: BaseEstimator) -> dict[str, Any]:
+def evaluate_svm_classifier(
+    path_to_test_data: Path, svm_model: BaseEstimator
+) -> dict[str, Any]:
     class_names = ["Handwritten", "Printed"]
     features_testing, labels_testing = get_hog_dataset(
         path_to_test_data, IMAGE_SIZE
@@ -37,10 +39,12 @@ def evaluate_svm_classifier(path_to_test_data: Path, svm_model: BaseEstimator) -
     print("Evaluating SVM classifier...")
     labels_prediction = svm_model.predict(features_testing)
 
-    report =classification_report(
-            labels_testing, labels_prediction, target_names=class_names, output_dict=True
-        )
-
+    report = classification_report(
+        labels_testing,
+        labels_prediction,
+        target_names=class_names,
+        output_dict=True,
+    )
 
     cm = confusion_matrix(labels_testing, labels_prediction, normalize="true")
 
@@ -66,4 +70,14 @@ def inference_svm_classifier(image_path: Path, svm_model: BaseEstimator) -> str:
 
 
 def get_svm_model() -> BaseEstimator:
-    return joblib.load(Path(__file__).parent / "models" / "svm_hog_classifier.joblib")
+    return joblib.load(
+        Path(__file__).parent / "models" / "svm_hog_classifier.joblib"
+    )
+
+
+if __name__ == "__main__":
+    path_to_data = getenv(
+        "PATH_TO_TRAIN_DATA", "/home/remi/work/document_dataset"
+    )
+    print(f"Training on data in : {path_to_data}")
+    train_svm_classifier(Path(path_to_data))

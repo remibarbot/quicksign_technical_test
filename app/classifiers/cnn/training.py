@@ -20,7 +20,7 @@ class SimpleTrainer:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print("Using device: {}".format(self.device))
         self.path_to_data = getenv(
-            "PATH_TO_DATA", "/home/remi/work/document_dataset"
+            "PATH_TO_TRAIN_DATA", "/home/remi/work/document_dataset"
         )
         print(f"Training on data in : {self.path_to_data}")
         self.model = SimpleCNN(IMAGE_SIZE).to(self.device)

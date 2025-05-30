@@ -5,11 +5,13 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-from pydantic import BaseModel
 
 from app.exceptions import BaseAPIException
 from app.webservice import app
-from tests.conftest import create_fake_image_at_path
+from tests.conftest import (
+    create_fake_image_at_path,
+    create_fake_image_folder_structure,
+)
 
 
 @pytest.fixture(name="client")
@@ -23,7 +25,6 @@ def test_base_routes_of_create_app(client: TestClient):
     """Test the health and root endpoints."""
     # Given
     expected_status_code = 200
-
 
     # When
     response_root = client.get("/")
@@ -68,6 +69,7 @@ def test_base_api_exception_response():
         "status_code": expected_status_code,
         "title": "internal server error",
     }
+
 
 def test_models_endpoint(client: TestClient):
     # Given
@@ -157,12 +159,7 @@ def test_evaluate_cnn(client: TestClient, tmp_path: Path):
     """Test /evaluate/cnn endpoint."""
     # Given
     test_data_path = tmp_path / "fake_eval_dir" / "test"
-    handwritten_path = test_data_path / "handwritten"
-    printed_path = test_data_path / "printed"
-    handwritten_path.mkdir(parents=True, exist_ok=True)
-    printed_path.mkdir(parents=True, exist_ok=True)
-    create_fake_image_at_path(handwritten_path / "image_1.jpg", 128)
-    create_fake_image_at_path(printed_path / "image_1.jpg", 128)
+    create_fake_image_folder_structure(test_data_path)
     payload = {"test_data_path": str(test_data_path)}
 
     expected_response_code = 200
@@ -182,12 +179,7 @@ def test_evaluate_svm(client: TestClient, tmp_path: Path):
     """Test /evaluate/svm endpoint."""
     # Given
     test_data_path = tmp_path / "fake_eval_dir" / "test"
-    handwritten_path = test_data_path / "handwritten"
-    printed_path = test_data_path / "printed"
-    handwritten_path.mkdir(parents=True, exist_ok=True)
-    printed_path.mkdir(parents=True, exist_ok=True)
-    create_fake_image_at_path(handwritten_path / "image_1.jpg", 128)
-    create_fake_image_at_path(printed_path / "image_1.jpg", 128)
+    create_fake_image_folder_structure(test_data_path)
     payload = {"test_data_path": str(test_data_path)}
 
     expected_response_code = 200
@@ -203,12 +195,17 @@ def test_evaluate_svm(client: TestClient, tmp_path: Path):
     assert "AUC" in response.json()
 
 
-def test_data_endpoint_with_existing_dir(client: TestClient, tmp_path: Path, monkeypatch):
+def test_data_endpoint_with_existing_dir(
+    client: TestClient, tmp_path: Path, monkeypatch
+):
     """Test /data endpoint when /data exists."""
     # Given
     # Patch Path("/data").exists to True, and glob to return a list
     monkeypatch.setattr("pathlib.Path.exists", lambda self: True)
-    monkeypatch.setattr("pathlib.Path.glob", lambda self, pat: [tmp_path / "file1.txt", tmp_path / "file2.txt"])
+    monkeypatch.setattr(
+        "pathlib.Path.glob",
+        lambda self, pat: [tmp_path / "file1.txt", tmp_path / "file2.txt"],
+    )
 
     # When
     response = client.get("/data")
