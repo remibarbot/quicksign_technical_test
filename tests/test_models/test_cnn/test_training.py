@@ -3,7 +3,8 @@ from unittest.mock import Mock, patch
 
 from torch.utils.data import DataLoader
 
-from app.models.cnn.training import IMAGE_SIZE, SimpleTrainer
+from app.classifiers.cnn import IMAGE_SIZE
+from app.classifiers.cnn.training import SimpleTrainer
 from tests.conftest import create_fake_image_at_path
 
 

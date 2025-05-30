@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from app.models.cnn.metric_accumulator import MetricAccumulator
+from app.classifiers.cnn.metric_accumulator import MetricAccumulator
 
 
 def test_update__adds_the_expected_values_to_the_internal_state() -> None:

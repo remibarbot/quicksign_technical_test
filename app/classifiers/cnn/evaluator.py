@@ -1,21 +1,20 @@
 from os import getenv
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from numpy.typing import NDArray
 from sklearn.metrics import (
-    ConfusionMatrixDisplay,
+    classification_report,
     confusion_matrix,
     roc_auc_score,
 )
 from tabulate import tabulate
 from tqdm import tqdm
 
+from app.classifiers.cnn import IMAGE_SIZE
+from app.classifiers.cnn.simple_cnn import SimpleCNN
 from app.data.data_loading import get_data_loader, get_val_transforms
-from app.models.cnn.simple_cnn import SimpleCNN
-from app.models.cnn.training import IMAGE_SIZE
 
 
 class Evaluator:
@@ -35,7 +34,6 @@ class Evaluator:
             shuffle=False,
             transforms=get_val_transforms(image_size=IMAGE_SIZE),
         )
-
 
     def evaluate(self) -> None:
         self.model.eval()
@@ -59,14 +57,19 @@ class Evaluator:
         all_probs = [x[0] for x in all_probs]
         all_preds_int = [int(x[0]) for x in all_preds]
 
+        class_names = ["Handwritten", "Printed"]
         # Confusion matrix: (true labels, predicted labels)
         cm = confusion_matrix(all_targets, all_preds_int, normalize="true")
         # ROC AUC: (true labels, predicted probabilities)
         auc = roc_auc_score(all_targets, all_probs)
 
-        print("AUC:", {auc})
+        print("AUC:", {round(float(auc), 4)})
+        print(
+            classification_report(
+                all_targets, all_preds_int, target_names=class_names
+            )
+        )
         # Build table with headers
-        class_names = ["Handwritten", "Printed"]
         headers = [""] + [f"Pred {name}" for name in class_names]
         table = []
         for i, row in enumerate(cm):

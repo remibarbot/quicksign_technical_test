@@ -5,15 +5,14 @@ import torch
 from torch import nn, optim
 from tqdm import tqdm
 
+from app.classifiers.cnn import IMAGE_SIZE
+from app.classifiers.cnn.metric_accumulator import MetricAccumulator
+from app.classifiers.cnn.simple_cnn import SimpleCNN
 from app.data.data_loading import (
     get_data_loader,
     get_train_transforms,
     get_val_transforms,
 )
-from app.models.cnn.metric_accumulator import MetricAccumulator
-from app.models.cnn.simple_cnn import SimpleCNN
-
-IMAGE_SIZE = 128
 
 
 class SimpleTrainer:
@@ -81,8 +80,7 @@ class SimpleTrainer:
         return val_loss, val_acc
 
     def train(self, num_epochs: int) -> None:
-        """
-        Train the model for num_epochs epochs.
+        """Train the model for num_epochs epochs.
 
         Will stop early if the validation loss raises two times in a row.
         """
